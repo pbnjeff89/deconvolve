@@ -19,9 +19,7 @@ Output:
 
 import time
 import numpy as np
-
-from initialize import (get_initial_energy_distribution,
-                        get_initial_density_of_states)
+from .calculations import *
 
 def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     """
@@ -34,7 +32,9 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     filepath: This is a file of two columns containing the bias
     voltage and their associated differential conductances. The unit
     of bias voltage is in Volts, and the unit of differential
-    conductance is a multiple of e^2/h.
+    conductance is a multiple of e^2/h. The first column must be
+    the voltage bias and the second column is the differential
+    conductance.
 
     superconducting_gap: This is the energy gap in units of
     electron volts (eV). Used in calculating the differential
@@ -47,12 +47,15 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     initial non-equilibrium distribution
 
     transport_type: A string that should be in this list:
-        'ballistic'
-        'ph scattering' (phonon scattering)
-        'ee scattering' (electron-electron scattering)
+        'b'  (ballistic)
+        'ph' (phonon scattering)
+        'ee' (electron-electron scattering)
     This directly determines the initial non-equilibrium distribution
-    function.
+    function. The meanings of these particular terms is outside the
+    scope of the code and should be looked for in an textbook about
+    condensed matter systems.
     """
+
     start_time = time.time()
 
     data = np.loadtxt(file_path,delimiter='\t',skiprows=2)
@@ -64,11 +67,14 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
 
     (model_density_of_states, model_nonequilibrium_distribution,
         model_differential_conductance) = _initialize_models(data[:,0],
-                                                energies)
+                                                energies, transport_type)
 
-    print(model_density_of_states)
-    print(model_differential_conductance)
-    print(model_nonequilibrium_distribution)
+    calculate_differential_conductance(1, energies, 
+        1, 1, 1, 0.00273)
+
+    #print(model_density_of_states)
+    #print(model_differential_conductance)
+    #print(model_nonequilibrium_distribution)
 
     print('Total time: ' +  str(time.time() - start_time)
             + ' seconds.')
@@ -83,6 +89,10 @@ def _get_energies(voltages):
 
     voltages: This should be the numpy array of the voltages
     that come from the raw data.
+
+    Returns:
+
+    A numpy array of the energies
     """
     voltage_step = abs(voltages[1] - voltages[0])
     energy_max = abs(np.amax(voltages))
@@ -99,9 +109,9 @@ def _get_energies(voltages):
         energies.append(energy)
         energy += energy_step
 
-    return energies
+    return np.asarray(energies)
 
-def _initialize_models(voltages, energies):
+def _initialize_models(voltages, energies, transport_type):
     """
     Creates numpy arrays for the initial models of the differential
     conductance, the density of states, and the non-equilibrium
