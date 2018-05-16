@@ -19,7 +19,7 @@ Output:
 
 import time
 import numpy as np
-from .calculations import *
+from calculations import *
 
 def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     """
@@ -70,7 +70,7 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
                                                 energies, transport_type)
 
     calculate_differential_conductance(1, energies, 
-        1, 1, 1, 0.00273)
+        1, 1, 1, superconducting_gap)
 
     #print(model_density_of_states)
     #print(model_differential_conductance)
