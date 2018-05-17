@@ -16,22 +16,19 @@ def calculate_differential_conductance(bias, energies,
                             np.sqrt(energies ** 2 - superconducting_gap ** 2 + 0j))
 
     superconductor_dos_derivative = np.gradient(superconductor_dos)
-
     superconductor_distribution = get_energy_distribution(energies)
 
-
-def calculate_mse(data, model):
-    pass
+    return differential_conductance
 
 def shift_density_of_states(energies, dos, voltage_shift):
-    shifted_dos = _shift(energies, dos, voltage_shift, 0.0)
+    shifted_dos = shift(energies, dos, voltage_shift, 0.0)
     return shifted_dos
 
 def shift_distribution(energies, distribution, voltage_shift):
-    shifted_distribution = _shift(energies, distribution, voltage_shift, 1.0)
+    shifted_distribution = shift(energies, distribution, voltage_shift, 1.0)
     return shifted_distribution
 
-def _shift(energies, function, voltage_shift, tail):
+def shift(energies, function, voltage_shift, tail):
     """
     Returns a shifted function, useful for shifting the density of
     states and energy distribution. Each function defaults to zeros
