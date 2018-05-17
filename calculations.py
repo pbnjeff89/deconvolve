@@ -4,8 +4,8 @@ from distributions import *
 from matplotlib import pyplot as plt
 
 def calculate_differential_conductance(bias, energies, 
-        density_of_states, energy_distribution, temperature,
-        superconducting_gap):
+        sample_density_of_states, nonequilibrium_energy_distribution,
+        temperature, superconducting_gap):
     
     # Boltzmann constant in eV/K
     kb = 8.6173303e-5
@@ -17,6 +17,18 @@ def calculate_differential_conductance(bias, energies,
 
     superconductor_dos_derivative = np.gradient(superconductor_dos)
     superconductor_distribution = get_energy_distribution(energies)
+    
+    shifted_sample_dos = shift_density_of_states(energies,
+                                                sample_density_of_states,
+                                                bias)
+    shifted_sample_distribution = shift_distribution(energies,
+                                                    nonequilibrium_energy_distribution,
+                                                    bias)
+
+    differential_conductance = (
+        np.trapz(superconductor_dos_derivative * shifted_sample_dos
+            * (shifted_sample_distribution - superconductor_distribution)
+        )
 
     return differential_conductance
 
@@ -60,9 +72,6 @@ def shift(energies, function, voltage_shift, tail):
                         / np.absolute(energies[1] - energies[0])))
     weight = shift_energy - shift_index
 
-    # TODO:
-    # Write this in a more Pythonic way
-    # This seems to suggest
     num_energies = int(function.shape[0])
 
     for i in range(0, num_energies):

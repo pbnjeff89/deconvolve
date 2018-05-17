@@ -21,22 +21,22 @@ import time
 import numpy as np
 from calculations import *
 
-def deconvolve(file_path, superconducting_gap, temperature, transport_type):
+def deconvolve(file_path, superconducting_gap,
+                temperature, transport_type,
+                nonequilibrium_voltage, probe_location):
     """
     deconvolve finds the best possible nonequilibrium
     distribution function given the differential conductance
     data using a MSE metric.
 
-    Input:
-
-    filepath: This is a file of two columns containing the bias
+    :param filepath: This is a file of two columns containing the bias
     voltage and their associated differential conductances. The unit
     of bias voltage is in Volts, and the unit of differential
     conductance is a multiple of e^2/h. The first column must be
     the voltage bias and the second column is the differential
     conductance.
 
-    superconducting_gap: This is the energy gap in units of
+    :param superconducting_gap: This is the energy gap in units of
     electron volts (eV). Used in calculating the differential
     conductance.
 
@@ -55,7 +55,6 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     scope of the code and should be looked for in an textbook about
     condensed matter systems.
     """
-
     start_time = time.time()
 
     data = np.loadtxt(file_path,delimiter='\t',skiprows=2)
@@ -63,16 +62,21 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
     # Take out later...temporarily added in for test.txt
     data[:,0] = data[:,0] / 1000.0
 
+    target_differential_conductance = data[:,1]
+
+    biases = data[:,0]
     energies = _get_energies(data[:,0])
 
-    (model_density_of_states,
-        model_nonequilibrium_distribution) = _initialize_models(
-                                                data[:,0],
-                                                energies,
-                                                transport_type)
+    model_density_of_states = np.ones((energies.shape[0],1))
+    model_nonequilibrium_distribution = get_energy_distribution(
+                                            energies,
+                                            temperature,
+                                            transport_type=transport_type,
+                                            nonequilibrium_voltage = nonequilibrium_voltage,
+                                            probe_location = probe_location)
 
     model_differential_conductance = (
-        calculate_differential_conductance(1, energies, 
+        calculate_differential_conductance(biases, energies, 
         model_density_of_states, model_nonequilibrium_distribution, 
         temperature, superconducting_gap)
         )
@@ -115,18 +119,3 @@ def _get_energies(voltages):
         energy += energy_step
 
     return np.asarray(energies)
-
-def _initialize_models(voltages, energies, transport_type):
-    """
-    Creates numpy arrays for the initial models of the the density
-    of states and the non-equilibrium distribution functions.
-    """
-    num_voltages = voltages.shape[0]
-    num_energies = len(energies)
-
-    # Factor of 1.0e-3 from Nick Bronn's thesis
-    model_density_of_states = np.ones((num_energies,1)) * 1.0e-3
-    model_nonequilibrium_distribution = np.zeros((num_energies,1))
-
-    return (model_density_of_states,
-            model_nonequilibrium_distribution)
