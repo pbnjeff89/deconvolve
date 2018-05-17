@@ -40,13 +40,13 @@ def deconvolve(file_path, superconducting_gap,
     electron volts (eV). Used in calculating the differential
     conductance.
 
-    temperature: The temperature of the experiment, in units of
+    :param temperature: The temperature of the experiment, in units of
     Kelvin (K). Used in calculating the Fermi-Dirac distribution
     function of the superconductor and calculating the temperature
     of electrons in the electron-electron scattering case for the
     initial non-equilibrium distribution
 
-    transport_type: A string that should be in this list:
+    :param transport_type: A string that should be in this list:
         'b'  (ballistic)
         'ph' (phonon scattering)
         'ee' (electron-electron scattering)
@@ -67,7 +67,7 @@ def deconvolve(file_path, superconducting_gap,
     biases = data[:,0]
     energies = _get_energies(data[:,0])
 
-    model_density_of_states = np.ones((energies.shape[0],1))
+    model_density_of_states = np.ones((energies.shape[0],))
     model_nonequilibrium_distribution = get_energy_distribution(
                                             energies,
                                             temperature,

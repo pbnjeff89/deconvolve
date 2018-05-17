@@ -1,6 +1,5 @@
 import numpy as np
-from distributions import *
-
+import warnings
 from matplotlib import pyplot as plt
 
 def calculate_differential_conductance(bias, energies, 
@@ -16,7 +15,7 @@ def calculate_differential_conductance(bias, energies,
                             np.sqrt(energies ** 2 - superconducting_gap ** 2 + 0j))
 
     superconductor_dos_derivative = np.gradient(superconductor_dos)
-    superconductor_distribution = get_energy_distribution(energies)
+    superconductor_distribution = get_energy_distribution(energies, temperature)
     
     shifted_sample_dos = shift_density_of_states(energies,
                                                 sample_density_of_states,
@@ -27,7 +26,7 @@ def calculate_differential_conductance(bias, energies,
 
     differential_conductance = (
         np.trapz(superconductor_dos_derivative * shifted_sample_dos
-            * (shifted_sample_distribution - superconductor_distribution)
+            * (shifted_sample_distribution - superconductor_distribution))
         )
 
     return differential_conductance
@@ -84,3 +83,75 @@ def shift(energies, function, voltage_shift, tail):
             shifted[i] = tail
 
     return shifted
+
+def get_energy_distribution(energies, temperature,
+                            transport_type='fd',
+                            nonequilibrium_voltage = 0,
+                            probe_location = 0):
+    """
+    Returns the specified energy distribution.
+
+    :param energies: Numpy array of energies
+
+    :param temperature: Lattice temperature, which should be close to the
+    temperature measured at the sample level.
+
+    :param transport_type: If input is user-given, then it should be in:
+        'b'  (ballistic)
+        'ph' (phonon scattering)
+        'ee' (electron-electron scattering)
+    Otherwise, it defaults to 'fd' (Fermi-Dirac).
+
+    :param non_equilibrium_voltage: Nonequilibrium voltage across the normal leads of the
+    system. (N.b. not the same as the voltage across the tunnel
+    probes.)
+
+    :param probe_location: This should be a value between 0 and 1. This describes
+    where along the 1D system the probe is, as a multiple of the length.
+    (e.g. probe_location = 0.5 says that the probe is halfway between the
+    ends of the system.)
+
+    :returns distribution:
+    """
+    # There is an overflow when calculating exponentials, but it
+    # seems to be quite harmless as the numerics that this attempts
+    # to calculate are simply the zeroes
+    warnings.simplefilter(action='ignore', category='RuntimeWarning')
+
+    # Book-keeping for making the variable names shorter
+    kb = 8.6173303e-5
+    T = temperature
+    x = probe_location
+    U = nonequilibrium_voltage
+    fermi_dirac_distribution = 1 / (1 + np.exp(energies / (kb * T)))
+
+    if transport_type is 'fd': 
+        warnings.resetwarnings()
+        return fermi_dirac_distribution
+    elif transport_type is 'b':
+        low_distribution = fermi_dirac_distribution
+        high_distribution = shift(energies, fermi_dirac_distribution,
+                                    U, 1.0)
+        distribution =  ( (1 - x) * low_distribution
+                            + x * high_distribution )
+        warnings.resetwarnings()
+        return distribution
+    elif transport_type is 'ph':
+        distribution = shift(energies, fermi_dirac_distribution,
+                                -U * x, 1.0)
+        warnings.resetwarnings()
+        return distribution
+    else:
+        # implicitly, this ought to be the case 'ee'
+
+        # Lorentz number
+        # N.b. electron charge is set to 1
+        L = np.pi ** 2 / 3 * kb ** 2
+
+        # temperature in the hot-electron regime
+        T = np.sqrt(T^2 + x * (1-x) * U ** 2 / L)
+        distribution = 1 / (1 + np.exp(energies / (kb * T)))
+        distribution = shift(energies, distribution,
+                                -U * x, 1.0)
+        warnings.resetwarnings()
+        return distribution
