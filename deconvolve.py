@@ -65,12 +65,17 @@ def deconvolve(file_path, superconducting_gap, temperature, transport_type):
 
     energies = _get_energies(data[:,0])
 
-    (model_density_of_states, model_nonequilibrium_distribution,
-        model_differential_conductance) = _initialize_models(data[:,0],
-                                                energies, transport_type)
+    (model_density_of_states,
+        model_nonequilibrium_distribution) = _initialize_models(
+                                                data[:,0],
+                                                energies,
+                                                transport_type)
 
-    calculate_differential_conductance(1, energies, 
-        1, 1, 1, superconducting_gap)
+    model_differential_conductance = (
+        calculate_differential_conductance(1, energies, 
+        model_density_of_states, model_nonequilibrium_distribution, 
+        temperature, superconducting_gap)
+        )
 
     #print(model_density_of_states)
     #print(model_differential_conductance)
@@ -113,21 +118,15 @@ def _get_energies(voltages):
 
 def _initialize_models(voltages, energies, transport_type):
     """
-    Creates numpy arrays for the initial models of the differential
-    conductance, the density of states, and the non-equilibrium
-    distribution functions.
+    Creates numpy arrays for the initial models of the the density
+    of states and the non-equilibrium distribution functions.
     """
     num_voltages = voltages.shape[0]
     num_energies = len(energies)
 
-    model_differential_conductance = np.zeros((num_voltages,2))
-    model_density_of_states = np.zeros((num_energies,2))
-    model_nonequilibrium_distribution = np.zeros((num_energies,2))
-
-    model_differential_conductance[:,0] = voltages
-    model_density_of_states[:,0] = energies
-    model_nonequilibrium_distribution[:,0] = energies
+    # Factor of 1.0e-3 from Nick Bronn's thesis
+    model_density_of_states = np.ones((num_energies,1)) * 1.0e-3
+    model_nonequilibrium_distribution = np.zeros((num_energies,1))
 
     return (model_density_of_states,
-            model_nonequilibrium_distribution,
-            model_differential_conductance)
+            model_nonequilibrium_distribution)
