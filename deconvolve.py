@@ -23,7 +23,8 @@ from calculations import *
 
 def deconvolve(file_path, superconducting_gap,
                 temperature, transport_type,
-                nonequilibrium_voltage, probe_location):
+                nonequilibrium_voltage, probe_location,
+                learning_rate = 0.1):
     """
     deconvolve finds the best possible nonequilibrium
     distribution function given the differential conductance
@@ -70,20 +71,46 @@ def deconvolve(file_path, superconducting_gap,
     model_density_of_states = np.ones((energies.shape[0],))
     model_nonequilibrium_distribution = get_energy_distribution(
                                             energies,
-                                            temperature,
+                                            temperature=temperature,
                                             transport_type=transport_type,
                                             nonequilibrium_voltage = nonequilibrium_voltage,
                                             probe_location = probe_location)
 
-    model_differential_conductance = (
-        calculate_differential_conductance(biases, energies, 
-        model_density_of_states, model_nonequilibrium_distribution, 
-        temperature, superconducting_gap)
-        )
+    error_still_decreasing = True
+    previous_error = 10000.0
 
-    #print(model_density_of_states)
-    #print(model_differential_conductance)
-    #print(model_nonequilibrium_distribution)
+    while error_still_decreasing:
+
+        model_differential_conductance = []
+
+        for bias in biases:
+            model_differential_conductance.append(
+                calculate_differential_conductance(bias, energies, 
+                model_density_of_states, model_nonequilibrium_distribution, 
+                temperature, superconducting_gap)
+                )
+        
+        model_differential_conductance = np.asarray(model_differential_conductance)
+
+        error = calculate_mean_square_error(target_differential_conductance,
+                                            model_differential_conductance)
+        error_derivatives = calculate_error_derivatives(target_differential_conductance,
+                                                        model_differential_conductance)
+        
+        error_sum = # TODO: sum up array of errors
+
+        if (error_sum - previous_error_sum) < tolerance:
+            error_still_decreasing = False
+
+        model_density_of_states = update(model_density_of_states, learning_rate,
+                                            error_derivatives, 'dos')
+        model_nonequilibrium_distribution = update(model_nonequilibrium_distribution,
+                                                    learning_rate,
+                                                    error_derivatives,
+                                                    'distribution')
+
+    # TODO: output density of states
+    # TODO: output nonequilibrium distribution
 
     print('Total time: ' +  str(time.time() - start_time)
             + ' seconds.')

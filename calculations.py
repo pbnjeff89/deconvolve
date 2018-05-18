@@ -155,3 +155,20 @@ def get_energy_distribution(energies, temperature,
                                 -U * x, 1.0)
         warnings.resetwarnings()
         return distribution
+
+def update(function, learning_rate, error_derivatives, function_type):
+    """
+    Uses the errors and the learning rate to update the functions used
+    to calculate the differential conductance.
+
+    :param function: The function that contains input for the differential
+    conductance.
+    :param learning_rate: The rate at which the numerical values of a function
+    update to reach convergence.
+    :param error_derivatives: A numpy array that states how much the error
+    changes for a given variable.
+    :param function_type: Should be in the list: ['dos','distribution'] and
+    is used to determine whether or not the learning rate is multiplied.
+    :returns: The function with values that should push the error towards
+    a minimum.
+    """
