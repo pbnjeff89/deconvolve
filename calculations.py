@@ -156,7 +156,7 @@ def get_energy_distribution(energies, temperature,
         warnings.resetwarnings()
         return distribution
 
-def update(function, learning_rate, error_derivatives, function_type):
+def update(function, learning_rate, error_derivatives, function_min = None, function_max = None):
     """
     Uses the errors and the learning rate to update the functions used
     to calculate the differential conductance.
@@ -172,3 +172,48 @@ def update(function, learning_rate, error_derivatives, function_type):
     :returns: The function with values that should push the error towards
     a minimum.
     """
+    # 
+
+def calculate_square_errors(biases, energies, model_density_of_states,
+                    model_nonequilibrium_distribution, temperature,
+                    superconducting_gap, target_differential_conductance):
+    """
+    Returns the mean square error between the model and target.
+
+    :param model_data: Numpy array of model
+    :param target_data: Numpy array of experimental data
+    :returns: A numpy array with the same shape as the model and target data
+    """
+    model_differential_conductance = []
+
+    for bias in biases:
+        model_differential_conductance.append(
+            calculate_differential_conductance(bias, energies, 
+            model_density_of_states, model_nonequilibrium_distribution, 
+            temperature, superconducting_gap)
+            )
+    
+    model_differential_conductance = np.asarray(model_differential_conductance)
+
+    square_errors = (target_differential_conductance - model_differential_conductance) ** 2
+
+    return (model_differential_conductance, square_errors)
+
+def calculate_error_derivatives(model_density_of_states,
+                                model_nonequilibrium_distribution):
+    """
+    Returns the partial derivatives w.r.t. variables that will be updated.
+    """
+    partial_error_derivatives = []
+
+    # Values taken from NB's thesis
+    diff_dos = (1e-6 * sum(model_density_of_states)
+                / model_density_of_states.shape[0])
+    diff_f = (1e-6 * sum(model_nonequilibrium_distribution)
+                / model_nonequilibrium_distribution.shape[0])
+
+    # Calculate partials for DOS
+
+    # Calculate partials for f
+
+    return partial_error_derivatives

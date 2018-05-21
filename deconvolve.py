@@ -81,30 +81,26 @@ def deconvolve(file_path, superconducting_gap,
 
     while error_still_decreasing:
 
-        model_differential_conductance = []
-
-        for bias in biases:
-            model_differential_conductance.append(
-                calculate_differential_conductance(bias, energies, 
-                model_density_of_states, model_nonequilibrium_distribution, 
-                temperature, superconducting_gap)
-                )
+        (model_differential_conductance, square_errors) = calculate_square_errors(
+                                            biases, energies,
+                                            model_density_of_states,
+                                            model_nonequilibrium_distribution,
+                                            temperature,
+                                            superconducting_gap,
+                                            target_differential_conductance)
         
-        model_differential_conductance = np.asarray(model_differential_conductance)
-
-        error = calculate_mean_square_error(target_differential_conductance,
-                                            model_differential_conductance)
-        error_derivatives = calculate_error_derivatives(target_differential_conductance,
-                                                        model_differential_conductance)
-        
-        error_sum = # TODO: sum up array of errors
+        error_sum = np.sum(square_errors) / square_errors.shape[0]
 
         if (error_sum - previous_error_sum) < tolerance:
             error_still_decreasing = False
-
-        model_density_of_states = update(model_density_of_states, learning_rate,
+        else:
+            previous_error_sum = error_sum
+            error_derivatives = calculate_error_derivatives(model_density_of_states,
+                                                        model_nonequilibrium_distribution,
+                                                        square_errors)
+            model_density_of_states = update(model_density_of_states, learning_rate,
                                             error_derivatives, 'dos')
-        model_nonequilibrium_distribution = update(model_nonequilibrium_distribution,
+            model_nonequilibrium_distribution = update(model_nonequilibrium_distribution,
                                                     learning_rate,
                                                     error_derivatives,
                                                     'distribution')
