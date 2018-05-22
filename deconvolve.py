@@ -18,6 +18,8 @@ Output:
 """
 
 import time
+import os
+
 import numpy as np
 from calculations import *
 
@@ -27,8 +29,7 @@ def deconvolve(file_path, superconducting_gap,
                 learning_rate = 0.1):
     """
     deconvolve finds the best possible nonequilibrium
-    distribution function given the differential conductance
-    data using a MSE metric.
+    distribution function by least squares.
 
     :param filepath: This is a file of two columns containing the bias
     voltage and their associated differential conductances. The unit
@@ -57,6 +58,10 @@ def deconvolve(file_path, superconducting_gap,
     condensed matter systems.
     """
     start_time = time.time()
+
+    (directory, file_name) = os.path.split(file_path)
+    (file_base_name, file_extension) = (os.path.splitext(file_name[0]),
+                                        os.path.splitext(file_name[1]))
 
     data = np.loadtxt(file_path,delimiter='\t',skiprows=2)
 
@@ -95,18 +100,72 @@ def deconvolve(file_path, superconducting_gap,
             error_still_decreasing = False
         else:
             previous_error_sum = error_sum
-            error_derivatives = calculate_error_derivatives(model_density_of_states,
-                                                        model_nonequilibrium_distribution,
-                                                        square_errors)
-            model_density_of_states = update(model_density_of_states, learning_rate,
-                                            error_derivatives, 'dos')
+
+            differential_dos = (1e-6 * np.sum(model_density_of_states)
+                                    / model_density_of_states.shape[0])
+            differential_dist = (1e-6 * np.sum(model_nonequilibrium_distribution)
+                                    / model_nonequilibrium_distribution.shape[0])
+
+            model_dos_with_differential = (model_density_of_states
+                                            + differential_dos)
+            model_dist_with_differential = (model_nonequilibrium_distribution
+                                            + differential_dist)
+
+            _, dos_square_errors_with_diff = calculate_square_errors(
+                                biases, energies,
+                                model_dos_with_differential,
+                                model_nonequilibrium_distribution,
+                                temperature,
+                                superconducting_gap,
+                                target_differential_conductance)
+            dos_error_derivatives = ((dos_square_errors_with_diff - square_errors)
+                                        / differential_dos)
+            model_density_of_states = update(model_density_of_states,
+                                            learning_rate,
+                                            dos_error_derivatives)
+
+            # N.b. that the probability distribution must only be
+            # monotonically decreasing
+            _, dist_square_errors_with_diff = calculate_square_errors(
+                                biases, energies,
+                                model_density_of_states,
+                                model_dist_with_differential,
+                                temperature,
+                                superconducting_gap,
+                                target_differential_conductance)
+            # Multiplier helps distribution update faster than the one
+            # for density of states
+            distribution_error_derivatives = ((dist_square_errors_with_diff - square_errors)
+                                                / differential_dist) * 10000
             model_nonequilibrium_distribution = update(model_nonequilibrium_distribution,
                                                     learning_rate,
-                                                    error_derivatives,
-                                                    'distribution')
+                                                    error_derivatives)
+            model_nonequilibrium_distribution = np.minimum.accumulate(
+                                                        model_nonequilibrium_distribution)
 
-    # TODO: output density of states
-    # TODO: output nonequilibrium distribution
+    energies = energies.reshape(energies.shape[0],1)
+    model_density_of_states = model_density_of_states.reshape(
+                                model_density_of_states.shape[0],1)
+    model_nonequilibrium_distribution = model_nonequilibrium_distribution.reshape(
+                                model_nonequilibrium_distribution.shape[0],1)
+
+    output_density_of_states = np.concatenate(
+        (energies,model_density_of_states), axis=1)
+    output_nonequilibrium_distribution = np.concatenate(
+        (energies,model_nonequilibrium_distribution), axis=1)
+
+    save_directory = directory + file_base_name
+
+    if not os.path.exists(directory + file_base_name):
+        os.mkdir(save_directory)
+
+    np.savetxt(save_directory + 'dos.txt',
+                output_density_of_states,
+                delimiter = ',')
+
+    np.savetxt(save_directory + 'nonequilibrium_f.txt',
+                output_nonequilibrium_distribution,
+                delimiter = ',')
 
     print('Total time: ' +  str(time.time() - start_time)
             + ' seconds.')

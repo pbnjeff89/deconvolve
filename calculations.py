@@ -6,6 +6,23 @@ def calculate_differential_conductance(bias, energies,
         sample_density_of_states, nonequilibrium_energy_distribution,
         temperature, superconducting_gap):
     
+    """
+    Calculates the differential conductance by integrating over energy space
+    given the density of states and distribution functions of the probe
+    and the sample.
+
+    :param bias: The voltage bias that shifts the relative position of the
+    density of states.
+    :param energies: Numpy array of the energies.
+    :param sample_density_of_states: Numpy array of the model for the density
+    of states of the sample.
+    :param nonequilibrium_energy_distribution:  Numpy array of the model for
+    the nonequilibrium energy distribution of the electrons in the smaple.
+    :param temperature: The experimental temperature of the sample.
+    :param superconducting_gap: The energy gap characteristic of the
+    superconducting gap of the tunneling probe in the experiment.
+    """
+
     # Boltzmann constant in eV/K
     kb = 8.6173303e-5
 
@@ -17,12 +34,10 @@ def calculate_differential_conductance(bias, energies,
     superconductor_dos_derivative = np.gradient(superconductor_dos)
     superconductor_distribution = get_energy_distribution(energies, temperature)
     
-    shifted_sample_dos = shift_density_of_states(energies,
-                                                sample_density_of_states,
-                                                bias)
-    shifted_sample_distribution = shift_distribution(energies,
-                                                    nonequilibrium_energy_distribution,
-                                                    bias)
+    shifted_sample_dos = shift(energies, sample_density_of_states,
+                                bias, 0.0)
+    shifted_sample_distribution = shift(energies, nonequilibrium_energy_distribution,
+                                    bias, 1.0)
 
     differential_conductance = (
         np.trapz(superconductor_dos_derivative * shifted_sample_dos
@@ -31,13 +46,6 @@ def calculate_differential_conductance(bias, energies,
 
     return differential_conductance
 
-def shift_density_of_states(energies, dos, voltage_shift):
-    shifted_dos = shift(energies, dos, voltage_shift, 0.0)
-    return shifted_dos
-
-def shift_distribution(energies, distribution, voltage_shift):
-    shifted_distribution = shift(energies, distribution, voltage_shift, 1.0)
-    return shifted_distribution
 
 def shift(energies, function, voltage_shift, tail):
     """
@@ -46,21 +54,13 @@ def shift(energies, function, voltage_shift, tail):
     for each energy, and the tail value assists in taking care
     of the function values in the far negative regions.
 
-    Input:
-
-    energies: A numpy array of the energies.
-
-    function: A function of energy, like the density of states or
-    the energy distribution of electrons
-
-    voltage_shift: The voltage shift that the function needs to shift
+    :param energies: A numpy array of the energies.
+    :param function: A function of energy, like the density of states or
+    the energy distribution of electrons.
+    :param voltage_shift: The voltage shift that the function needs to shift
     by. (N.b. the electron charge is set to 1.)
-
-    tail: The value of the function that should be set.
-
-    Returns:
-
-    shifted: A numpy array of the shifted function.
+    :param tail: The value of the function that should be set.
+    :returns shifted: Returns the function shifted by the voltage_shift
     """
     shifted = np.zeros(function.shape[0])
 
@@ -92,25 +92,20 @@ def get_energy_distribution(energies, temperature,
     Returns the specified energy distribution.
 
     :param energies: Numpy array of energies
-
     :param temperature: Lattice temperature, which should be close to the
     temperature measured at the sample level.
-
     :param transport_type: If input is user-given, then it should be in:
         'b'  (ballistic)
         'ph' (phonon scattering)
         'ee' (electron-electron scattering)
     Otherwise, it defaults to 'fd' (Fermi-Dirac).
-
     :param non_equilibrium_voltage: Nonequilibrium voltage across the normal leads of the
     system. (N.b. not the same as the voltage across the tunnel
     probes.)
-
     :param probe_location: This should be a value between 0 and 1. This describes
     where along the 1D system the probe is, as a multiple of the length.
     (e.g. probe_location = 0.5 says that the probe is halfway between the
     ends of the system.)
-
     :returns distribution:
     """
     # There is an overflow when calculating exponentials, but it
@@ -156,7 +151,8 @@ def get_energy_distribution(energies, temperature,
         warnings.resetwarnings()
         return distribution
 
-def update(function, learning_rate, error_derivatives, function_min = None, function_max = None):
+def update(function, learning_rate, error_derivatives,
+            function_min = None, function_max = None):
     """
     Uses the errors and the learning rate to update the functions used
     to calculate the differential conductance.
@@ -172,7 +168,12 @@ def update(function, learning_rate, error_derivatives, function_min = None, func
     :returns: The function with values that should push the error towards
     a minimum.
     """
-    # 
+    updated_function = function - learning_rate * error_derivatives
+    
+    if function_min:
+        updated_function[updated_function < function_min] = function_min
+    if function_max:
+        updated_function[updated_function > function_max] = function_max
 
 def calculate_square_errors(biases, energies, model_density_of_states,
                     model_nonequilibrium_distribution, temperature,
@@ -198,22 +199,3 @@ def calculate_square_errors(biases, energies, model_density_of_states,
     square_errors = (target_differential_conductance - model_differential_conductance) ** 2
 
     return (model_differential_conductance, square_errors)
-
-def calculate_error_derivatives(model_density_of_states,
-                                model_nonequilibrium_distribution):
-    """
-    Returns the partial derivatives w.r.t. variables that will be updated.
-    """
-    partial_error_derivatives = []
-
-    # Values taken from NB's thesis
-    diff_dos = (1e-6 * sum(model_density_of_states)
-                / model_density_of_states.shape[0])
-    diff_f = (1e-6 * sum(model_nonequilibrium_distribution)
-                / model_nonequilibrium_distribution.shape[0])
-
-    # Calculate partials for DOS
-
-    # Calculate partials for f
-
-    return partial_error_derivatives
