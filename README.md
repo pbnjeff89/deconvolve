@@ -1,6 +1,10 @@
 # Deconvolve
 
-This is a set of scripts to aid in deconvolving signals. In particular, the set of scripts here helps in deconvolving two signals: one comes from a BCS superconductor, and the other comes from some 1D system. Specifically, the signals are their respective density states, which are convolved because electrons are tunneling, and the resulting differential conductance signal is proportional to the density of states.
+This set of code assists in finding the electron energy distribution of a sample, which can be found in the integral of the equation below:
+
+![Equation for the differential conductance](didv.gif)
+
+This method uses a least squares method to find the best fit to the data. Currently, this script is specific only to superconducting tunneling spectroscopy, but it should be trivial to generalize this.
 
 # Getting started
 
@@ -10,7 +14,7 @@ Coming soon.
 
 # Contributing
 
-Here, the deconvolution procedure is performed by optimizing the square of the error.
+If you can think of ways to make the parameter inputs less confusing and to make some parts take advantage of vectorization, that'd be extremely helpful.
 
 # Authors
 
