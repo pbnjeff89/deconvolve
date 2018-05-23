@@ -193,11 +193,6 @@ def _get_energies(voltages):
     energy_step = (2 * energy_max
                     /round((2 * energy_max / voltage_step) - 1))
 
-    energies = []
-    energy = -energy_max
+    energies = np.arange(-energy_max, energy_max, energy_step)
 
-    while energy <= energy_max:
-        energies.append(energy)
-        energy += energy_step
-
-    return np.asarray(energies)
+    return energies
