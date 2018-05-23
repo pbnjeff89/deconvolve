@@ -101,45 +101,29 @@ def deconvolve(file_path, superconducting_gap,
         else:
             previous_error_sum = error_sum
 
-            differential_dos = (1e-6 * np.sum(model_density_of_states)
-                                    / model_density_of_states.shape[0])
-            differential_dist = (1e-6 * np.sum(model_nonequilibrium_distribution)
-                                    / model_nonequilibrium_distribution.shape[0])
-
-            model_dos_with_differential = (model_density_of_states
-                                            + differential_dos)
-            model_dist_with_differential = (model_nonequilibrium_distribution
-                                            + differential_dist)
-
-            _, dos_square_errors_with_diff = calculate_square_errors(
-                                biases, energies,
-                                model_dos_with_differential,
+            dos_error_derivatives = calculate_error_derivatives(
+                                perturbed_function_name='dos',
+                                model_density_of_states,
                                 model_nonequilibrium_distribution,
-                                temperature,
-                                superconducting_gap,
-                                target_differential_conductance)
-            dos_error_derivatives = ((dos_square_errors_with_diff - square_errors)
-                                        / differential_dos)
-            model_density_of_states = update(model_density_of_states,
-                                            learning_rate,
-                                            dos_error_derivatives)
+                                energies, square_errors,
+                                biases, target_differential_conductance,
+                                temperature, superconducting_gap):
+            dist_error_derivatives = calculate_error_derivatives(
+                                perturbed_function_name='f',
+                                model_nonequilibrium_distribution,
+                                model_density_of_states,
+                                energies, square_errors,
+                                biases, target_differential_conductance,
+                                temperature, superconducting_gap):
 
             # N.b. that the probability distribution must only be
             # monotonically decreasing
-            _, dist_square_errors_with_diff = calculate_square_errors(
-                                biases, energies,
-                                model_density_of_states,
-                                model_dist_with_differential,
-                                temperature,
-                                superconducting_gap,
-                                target_differential_conductance)
-            # Multiplier helps distribution update faster than the one
-            # for density of states
-            distribution_error_derivatives = ((dist_square_errors_with_diff - square_errors)
-                                                / differential_dist) * 10000
+            model_density_of_states = update(model_density_of_states,
+                                            learning_rate,
+                                            dos_error_derivatives)
             model_nonequilibrium_distribution = update(model_nonequilibrium_distribution,
                                                     learning_rate,
-                                                    error_derivatives)
+                                                    dist_error_derivatives)
             model_nonequilibrium_distribution = np.minimum.accumulate(
                                                         model_nonequilibrium_distribution)
 

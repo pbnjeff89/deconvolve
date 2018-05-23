@@ -175,6 +175,8 @@ def update(function, learning_rate, error_derivatives,
     if function_max:
         updated_function[updated_function > function_max] = function_max
 
+    return updated_function
+
 def calculate_square_errors(biases, energies, model_density_of_states,
                     model_nonequilibrium_distribution, temperature,
                     superconducting_gap, target_differential_conductance):
@@ -199,3 +201,38 @@ def calculate_square_errors(biases, energies, model_density_of_states,
     square_errors = (target_differential_conductance - model_differential_conductance) ** 2
 
     return (model_differential_conductance, square_errors)
+
+
+def calculate_error_derivatives(perturbed_function_name, function_to_perturb,
+                                unperturbed_function,
+                                energies, square_errors,
+                                biases, target_differential_conductance,
+                                temperature, superconducting_gap,
+                                multiplier=1e5):
+    """
+    Calculates the derivatives of the square of the residuals.
+    """
+
+    differential = 1e-6 * np.sum(function_to_perturb) / function_to_perturb.shape[0]
+    derivatives = np.zeros((energies.shape[0],))
+
+    for i in range(energies.shape[0]):
+        perturbed_function = function_to_perturb
+        perturbed_function[i] = perturbed_function[i] + differential
+
+        if perturbed_function_name is 'dos':
+            _, perturbed_errors = calculate_square_errors(
+                                    biases, energies,
+                                    perturbed_function, unperturbed_function,
+                                    temperature, superconducting_gap,
+                                    target_differential_conductance)
+            derivatives[i] = ((np.sum(perturbed_errors) - np.sum(square_errors))
+                            / differential)
+        else:
+            _, perturbed_errors = calculate_square_errors(
+                                    biases, energies,
+                                    unperturbed_function, perturbed_function,
+                                    temperature, superconducting_gap,
+                                    target_differential_conductance)
+            derivatives[i] = ((np.sum(perturbed_errors) - np.sum(square_errors))
+                            / differential) * multiplier
