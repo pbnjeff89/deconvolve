@@ -73,7 +73,7 @@ def deconvolve(file_path, superconducting_gap,
     biases = data[:,0]
     energies = _get_energies(data[:,0])
 
-    model_density_of_states = np.ones((energies.shape[0],))
+    model_density_of_states = np.ones((energies.shape[0],)) * 1e-3
     model_nonequilibrium_distribution = get_energy_distribution(
                                             energies,
                                             temperature=temperature,
