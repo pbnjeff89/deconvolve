@@ -94,7 +94,7 @@ def deconvolve(file_path, superconducting_gap,
                                             superconducting_gap,
                                             target_differential_conductance)
         
-        error_sum = np.sum(square_errors) / square_errors.shape[0]
+        error_sum = np.sum(square_errors)
 
         if (error_sum - previous_error_sum) < tolerance:
             error_still_decreasing = False
