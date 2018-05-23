@@ -154,16 +154,16 @@ def deconvolve(file_path, superconducting_gap,
     output_nonequilibrium_distribution = np.concatenate(
         (energies,model_nonequilibrium_distribution), axis=1)
 
-    save_directory = directory + file_base_name
+    save_directory = directory + '/' + file_base_name
 
-    if not os.path.exists(directory + file_base_name):
+    if not os.path.exists(save_directory):
         os.mkdir(save_directory)
 
-    np.savetxt(save_directory + 'dos.txt',
+    np.savetxt(save_directory + '/dos.txt',
                 output_density_of_states,
                 delimiter = ',')
 
-    np.savetxt(save_directory + 'nonequilibrium_f.txt',
+    np.savetxt(save_directory + '/nonequilibrium_f.txt',
                 output_nonequilibrium_distribution,
                 delimiter = ',')
 
